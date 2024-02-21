@@ -169,6 +169,68 @@ def printSort(optmize= OPTIMIZE_PRINT, optmize_size= OPTIMIZE_SIZE):
 
     del sortableChat
 
+# Lida com os comandos de chat
+def comands_handler(message, sock):
+    if message.split()[0] == "/help":
+        help_str = '''
+Lista de comandos:
+/membros -> Vê os membros do grupo e seu status online ou offline
+/chave -> Vê a chave de criptografia do grupo
+/ver (todas ou quantidade) -> exibe a quantidade de mensagens indicada ou todas
+/input -> Envia todas as mensagens presentes no arquivo de input, uma por linha
+/output -> Gera um arquivo com todas as mensagens da conversa'''
+        os.system(LIMPAR)
+        print(help_str)
+
+    # Mostra os membros do grupo e o status deles
+    elif message.split()[0] == "/membros":
+        for membro in membros:
+            print(f"{membro.name} - {membro.address[0]} ({membro.status}) ")
+
+    # Mostra a chave de encriptação
+    elif message.split()[0] == "/chave":
+        print(f"Chave de criptografia: {password}")
+    
+    # Mostra uma quantidade diferente de mensagens na tela
+    elif message.split()[0] == "/ver":
+        if message.split()[1] == "todas":
+            printSort(optmize= False)
+
+        elif message.split()[1].isdigit():
+            printSort(optmize= True, optmize_size= int(message.split()[1]))
+
+    # Gera o arquivo de output
+    elif message.split()[0] == "/output":
+        if not os.path.exists("Data/"):
+            os.makedirs("Data/")
+            
+        with open("Data/output_file.txt", 'w', encoding='utf-8') as arquivo:
+            sortableChat = list(conversa)
+            consensusSort(sortableChat)
+
+            for msg in sortableChat:
+                arquivo.write(f'{msg.user.name} - {msg.user.address}: {decrypt(msg.texto, password)}' + "\n")
+        
+        print("Arquivo da conversa gerado.")
+    
+    # Gera o arquivo de input
+    elif message.split()[0] == "/input":
+        if not os.path.exists("Data/"):
+            os.makedirs("Data/")
+            
+        with open("Data/input_file.txt", 'a+', encoding='utf-8') as arquivo:
+            arquivo.seek(0)
+            for linha in arquivo:
+                print("loop")
+                send_message(sock, clock, encrypt(linha.rstrip('\n'), password), membros, MSG)
+                printSort()
+                time.sleep(0.1)
+            
+            print("Mensagens do arquivo enviadas.")
+        
+    else:
+        print(f"Comando desconhecido! tente /help")
+
 def main():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((HOST, PORT))
@@ -182,8 +244,9 @@ def main():
 
     online_requester_thread = threading.Thread(target= online_requester, args=(sock, clock), daemon=True)
     online_requester_thread.start()
-
-    # while True: # para teste: Mostra em tempo real o status do usuário
+    
+    # Teste: Mostra em tempo real o status do usuário
+    # while True:
     #     string = ""
     #     for membro in membros:
     #         string += "\n" + f"{membro.name} - {membro.address}: {membro.status}" 
@@ -191,7 +254,7 @@ def main():
     #     print(string)
     #     time.sleep(0.16)
 
-    # First message
+    # Mensagem de sincronização de relógio inicial
     send_message(sock, clock, 'first', membros, SYN)
     while True:
         message = input(">:")
@@ -205,46 +268,7 @@ def main():
         
         # Se for um comando
         else:
-            if message.split()[0] == "/help":
-                help_str = '''
-Lista de comandos:
-/membros -> Vê os membros do grupo e seu status online ou offline
-/chave -> Vê a chave de criptografia do grupo
-/ver (todas ou quantidade) -> exibe a quantidade de mensagens indicada ou todas
-/output -> Gera um arquivo com tdas as mensagens da conversa'''
-                os.system(LIMPAR)
-                print(help_str)
-
-            elif message.split()[0] == "/membros":
-                for membro in membros:
-                    print(f"{membro.name} - {membro.address[0]} ({membro.status}) ")
-
-            elif message.split()[0] == "/chave":
-                print(f"Chave de criptografia: {password}")
-            
-            elif message.split()[0] == "/ver":
-                if message.split()[1] == "todas":
-                    printSort(optmize= False)
-
-                elif message.split()[1].isdigit():
-                    printSort(optmize= True, optmize_size= int(message.split()[1]))
-
-            elif message.split()[0] == "/output":
-                if not os.path.exists("Data/"):
-                    os.makedirs("Data/")
-                    
-                with open("Data/output_file.txt", 'w') as arquivo:
-                    sortableChat = list(conversa)
-                    consensusSort(sortableChat)
-
-                    for msg in sortableChat:
-                        arquivo.write(f'{msg.user.name} - {msg.user.address}: {decrypt(msg.texto, password)}' + "\n")
-                
-                print("Arquivo da conversa gerado!")
-            
-            else:
-                print(f"Comando desconhecido! tente /help")
-
+            comands_handler(message, sock)
 
 if __name__ == "__main__":
     main()

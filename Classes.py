@@ -64,13 +64,9 @@ class Contatos:
     def set_contatos(self):
         if not os.path.exists("Data/"):
             os.makedirs("Data/")
-
-        with open("Data/Contatos.txt", 'r+') as arquivo:
-            # Se o arquivo não existia, cria ele vazio
-            if not arquivo.read(1):
-                arquivo.write('')
             
-            # Recupera os contatos
+        # Recupera os contatos
+        with open("Data/Contatos.txt", 'r', encoding='utf-8') as arquivo:
             for linha in arquivo:
                 nome = linha.strip().split(', ')[0]
                 ip = linha.strip().split(', ')[1]
@@ -79,7 +75,7 @@ class Contatos:
                 membro = Membro(host= ip, port= porta, name= nome)
                 self.contatos[nome] = membro
                 self.contatos[f"{ip}:{porta}"] = membro
-
+            
     # Retorna um contato especificado pelo nome
     def get_contato(self, name):
         try:
