@@ -1,4 +1,4 @@
-import threading
+import threading, os
 from Config import *
 
 # OBJ membro
@@ -60,8 +60,17 @@ class Contatos:
 
             self.set_contatos()
 
+    # Seta os contatos
     def set_contatos(self):
-        with open("Contatos.txt", 'r') as arquivo:
+        if not os.path.exists("Data/"):
+            os.makedirs("Data/")
+
+        with open("Data/Contatos.txt", 'r+') as arquivo:
+            # Se o arquivo não existia, cria ele vazio
+            if not arquivo.read(1):
+                arquivo.write('')
+            
+            # Recupera os contatos
             for linha in arquivo:
                 nome = linha.strip().split(', ')[0]
                 ip = linha.strip().split(', ')[1]
@@ -71,12 +80,14 @@ class Contatos:
                 self.contatos[nome] = membro
                 self.contatos[f"{ip}:{porta}"] = membro
 
+    # Retorna um contato especificado pelo nome
     def get_contato(self, name):
         try:
             return self.contatos[name]
         except:
             return None
-        
+    
+    # Retorna um contato especificado pelo endereço
     def get_contato_by_address(self, address):
         try:
             host_str = f"{address[0]}:{address[1]}"
