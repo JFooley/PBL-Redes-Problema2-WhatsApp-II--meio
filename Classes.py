@@ -1,6 +1,7 @@
 import threading
 from Config import *
 
+# OBJ membro
 class Membro:
     def __init__(self, host, port, name):
         self.address = (host, int(port))
@@ -9,21 +10,21 @@ class Membro:
 
 # OBJ mensagem
 class Mensagem:
-    def __init__(self, user: Membro, texto, timestamp, membros):
+    def __init__(self, user: Membro, texto, logicstamp, membros):
         self.user = user
         self.texto = texto
-        self.timestamp = timestamp
+        self.logicstamp = logicstamp
         self.confirmations = {membro.address: False for membro in membros}
 
-    # Dois objetos Mensagem são considerados iguais se tiverem o mesmo timestamp e user.address
+    # Dois objetos Mensagem são considerados iguais se tiverem o mesmo logicstamp e user.address
     def __eq__(self, other):
         if isinstance(other, Mensagem):
-            return self.timestamp == other.timestamp and self.user.address == other.user.address
+            return self.logicstamp == other.logicstamp and self.user.address == other.user.address
         return False
     
-    # Hash baseado no timestamp e User.address para garantir unicidade no conjunto
+    # Hash baseado no logicstamp e User.address para garantir unicidade no conjunto
     def __hash__(self):
-        return hash((self.timestamp, self.user.address))
+        return hash((self.logicstamp, self.user.address))
     
 # OBJ Relógio de Lamport
 class LamportClock:

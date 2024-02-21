@@ -2,12 +2,17 @@ import socket
 import threading
 import os
 import pickle
+import time
 from Config import *
-from Online import *
 from Classes import *
 from Criptography import encrypt, decrypt
 
 print(whatsApp2)
+
+# Testa se você está online
+if socket.gethostbyname(socket.gethostbyname(socket.gethostname())) == "127.0.0.1":
+    print("ERRO! Você não está conectado a nenhuma rede.")
+    exit()
 
 # Dados
 conversa = set()
@@ -41,30 +46,39 @@ password = input("Insira a senha de criptografia do grupo: ")
 # Envia pacotes
 def send_message(sock, clock, message, membros, type):
     try:
-        lamport_time = 0
+        logicstamp = 0
         
         if type == SYN:
-            lamport_time = clock.increment()
+            logicstamp = clock.increment()
         if type == MSG:
-            lamport_time = clock.increment()
-            mensagem = Mensagem(usuario_obj, message, lamport_time, membros)
+            logicstamp = clock.increment()
+            mensagem = Mensagem(usuario_obj, message, logicstamp, membros)
             conversa.update([mensagem])
 
-        data = pickle.dumps((message, lamport_time, type))
+        data = pickle.dumps((message, logicstamp, type))
         for membro in membros:
             if membro.address != (HOST, PORT):
                 sock.sendto(data, membro.address)
-    except:
-        pass
+
+    except socket.error as e:
+        print(f"Erro de conexão! {e.strerror}\nTente novamente mais tarde...")
+        time.sleep(5)
+        exit()
 
 # Envia a sua conversa
 def sendChat(sock, adress):
-    for mensagemOBJ in conversa:
-        lamport_time = 0
-        partMessage = pickle.dumps(mensagemOBJ)
-        data = pickle.dumps((partMessage, lamport_time, CSP))
-        sock.sendto(data, adress)
-        
+    try:
+        for mensagemOBJ in conversa:
+            logicstamp = 0
+            partMessage = pickle.dumps(mensagemOBJ)
+            data = pickle.dumps((partMessage, logicstamp, CSP))
+            sock.sendto(data, adress)
+            
+    except socket.error as e:
+        print(f"Erro de conexão! {e.strerror}\nTente novamente mais tarde...")
+        time.sleep(5)
+        exit()
+
 # Recebe pacotes
 def listner(sock, clock):
     while True:
@@ -119,8 +133,11 @@ def online_requester(sock, clock):
                         membro.status = OFF
 
                     sock.sendto(data, membro.address)
-        except:
-            pass
+
+        except socket.error as e:
+            print(f"Erro de conexão! {e.strerror}\nTente novamente mais tarde...")
+            time.sleep(5)
+            exit()
 
         finally:
             time.sleep(ONLINE_SYNC_TIME)
@@ -128,13 +145,18 @@ def online_requester(sock, clock):
 # Ordena as mensagens
 def consensusSort(sortableChat):
     if bool(sortableChat):
-        sortableChat.sort(key=lambda x: (x.timestamp, x.user.address))
+        sortableChat.sort(key=lambda x: (x.logicstamp, x.user.address))
 
 # Mostra as mensagens em ordem
 def printSort():
     sortableChat = list(conversa)
     consensusSort(sortableChat)
 
+    # Otimiza a lista para mostrar apenas as 20 últimas mensagens
+    if OPTIMIZE_PRINT and len(sortableChat) > OPTIMIZE_SIZE:
+        sortableChat = sortableChat[-OPTIMIZE_SIZE:]
+    
+    # Exibe na tela
     os.system(LIMPAR)
     for msg in sortableChat:
         msg: Mensagem
@@ -143,7 +165,8 @@ def printSort():
         if (msg.user.address[0] == HOST and msg.user.address[1] == PORT):
             print(f'{colorIndex}Você\033[0m: {decrypt(msg.texto, password)}')
         else:
-            print(f'{colorIndex}{msg.user.name} - {msg.user.address} ({msg.user.status}) \033[0m: {decrypt(msg.texto, password)}')        
+            print(f'{colorIndex}{msg.user.name} - {msg.user.address} ({msg.user.status}) \033[0m: {decrypt(msg.texto, password)}')
+    print("on screen chatsize: ", len(sortableChat))
 
     del sortableChat
 
@@ -161,10 +184,12 @@ def main():
     online_requester_thread = threading.Thread(target= online_requester, args=(sock, clock), daemon=True)
     online_requester_thread.start()
 
-    # while True:
-    #     os.system(LIMPAR)
+    # while True: # para teste: Mostra em tempo real o status do usuário
+    #     string = ""
     #     for membro in membros:
-    #         print(f"{membro.name} - {membro.address}: {membro.status}")
+    #         string += "\n" + f"{membro.name} - {membro.address}: {membro.status}" 
+    #     os.system(LIMPAR)
+    #     print(string)
     #     time.sleep(0.16)
 
     # First message

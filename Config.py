@@ -4,7 +4,8 @@ import platform
 MSG = "mensage"
 SYN = "sync"
 CSP = "chatSyncPart"
-MCF = "mensage confirm"
+MSG_ACK = "mensage ack"
+SHOW = "mensage show"
 
 # Constantes de sincronização
 PING = "online ping"
@@ -24,6 +25,9 @@ LIMPAR_WIN = "cls"
 LIMPAR_LINUX = "clear"
 LIMPAR = LIMPAR_LINUX if platform.system() == "Linux" else LIMPAR_WIN
 
+# Outros
+OPTIMIZE_SIZE = 20
+OPTIMIZE_PRINT = True
 
 whatsApp2 = '''
           #                   #                                                             ####
