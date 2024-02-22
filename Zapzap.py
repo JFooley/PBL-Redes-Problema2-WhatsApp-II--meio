@@ -199,7 +199,7 @@ def pkgSort(sock, clock):
                     assure_send(message= msg.logicstamp, membros= membros, type= SHOW) # Envia o show para todos
                     printSort()
         
-# Trata as confirmações         0           1      2       3       4
+# Trata as confirmações         0         1        2      3        4
 def confirm_handler(): # (logicstamp, timestamp, type, message, address)
     while True:
         try:
@@ -263,7 +263,7 @@ def printSort(optmize= OPTIMIZE_PRINT, optmize_size= OPTIMIZE_SIZE):
         if (msg.user.address[0] == HOST and msg.user.address[1] == PORT):
             print(f'{colorIndex}Você\033[0m: {decrypt(msg.texto, password)}')
         else:
-            print(f'{colorIndex}{msg.user.name} - {msg.user.address} ({msg.user.status}) \033[0m: {decrypt(msg.texto, password)}')
+            print(f'{colorIndex}{msg.user.name} - ({msg.user.status}) \033[0m: {decrypt(msg.texto, password)}')
 
     del sortableChat
 
