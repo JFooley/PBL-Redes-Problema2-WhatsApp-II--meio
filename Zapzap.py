@@ -1,8 +1,4 @@
-import socket
-import threading
-import os
-import pickle
-import time
+import socket, threading, os, pickle, time, sys
 from Config import *
 from Classes import Mensagem, Membro, LamportClock, Contatos
 from Criptography import encrypt, decrypt
@@ -12,7 +8,7 @@ print(whatsApp2)
 # Testa se você está online
 if socket.gethostbyname(socket.gethostbyname(socket.gethostname())) == "127.0.0.1":
     print("ERRO! Você não está conectado a nenhuma rede.")
-    exit()
+    sys.exit()
 
 # Dados
 membros = []
@@ -72,7 +68,7 @@ def send(sock, clock, message, membros, type, target_address= None):
     except socket.error as e:
         print(f"Erro de conexão! {e.strerror}\nTente novamente mais tarde...")
         time.sleep(5)
-        exit()
+        sys.exit()
 
 # Envia os pacotes que necessitam de confirmação
 def assure_send(message, membros, type, target_address= None, is_resend= False):
@@ -118,7 +114,7 @@ def assure_send(message, membros, type, target_address= None, is_resend= False):
     except socket.error as e:
         print(f"Erro de conexão! {e.strerror}\nTente novamente mais tarde...")
         time.sleep(5)
-        exit()
+        sys.exit()
 
 # Envia a sua conversa
 def sendChat(adress):
@@ -129,7 +125,7 @@ def sendChat(adress):
     except socket.error as e:
         print(f"Erro de conexão! {e.strerror}\nTente novamente mais tarde...")
         time.sleep(5)
-        exit()
+        sys.exit()
 
 # Recebe pacotes
 def listner(sock, clock):
@@ -239,7 +235,7 @@ def online_requester(sock, clock):
         except socket.error as e:
             print(f"Erro de conexão! {e.strerror}\nTente novamente mais tarde...")
             time.sleep(5)
-            exit()
+            sys.exit()
 
         finally:
             time.sleep(ONLINE_SYNC_TIME)
