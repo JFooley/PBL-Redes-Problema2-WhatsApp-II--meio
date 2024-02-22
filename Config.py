@@ -9,6 +9,7 @@ SHOW = "mensage show" # Assure Send
 
 # Constantes de sincronização
 RESEND_TIME = 0.5
+INPUT_SEND_TIME = 0.3
 
 PING = "online ping" # Send
 PONG = "online ack" # Send

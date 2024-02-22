@@ -321,7 +321,7 @@ Lista de comandos:
             for linha in arquivo:
                 assure_send(encrypt(linha.rstrip('\n'), password), membros, MSG)
                 printSort()
-                time.sleep(0.1)
+                time.sleep(INPUT_SEND_TIME)
             
             print("Mensagens do arquivo enviadas.")
         
