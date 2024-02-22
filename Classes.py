@@ -39,7 +39,7 @@ class LamportClock:
 
     def update(self, received_time):
         with self.lock:
-            self.value = max(self.value, received_time) + 1
+            self.value = max(self.value, int(received_time)) + 1
             return self.value
 
 # OBJ contatos (classe Singleton)

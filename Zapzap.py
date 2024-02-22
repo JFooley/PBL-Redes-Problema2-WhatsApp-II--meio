@@ -4,7 +4,7 @@ import os
 import pickle
 import time
 from Config import *
-from Classes import *
+from Classes import Mensagem, Membro, LamportClock, Contatos
 from Criptography import encrypt, decrypt
 
 print(whatsApp2)
@@ -15,9 +15,14 @@ if socket.gethostbyname(socket.gethostbyname(socket.gethostname())) == "127.0.0.
     exit()
 
 # Dados
-conversa = set()
 membros = []
+conversa = set()
+no_confirmed = set()
+no_confirmed_lock = threading.Lock()
+
 pkgCache = [] # Cache temporário de pacotes
+waiting = [] # Cache de pacotes que precisam de confirmação
+confirms = [] # Cache de confirmações (logicstamps de pacotes)
 
 clock = LamportClock()
 Contatos().initialize()
@@ -43,22 +48,72 @@ for nome_membro in nomes_membros.split():
 
 password = input("Insira a senha de criptografia do grupo: ")
 
+# Socket e relógio Lógico
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind((HOST, PORT))
+
 # Envia pacotes
-def send_message(sock, clock, message, membros, type):
+def send(sock, clock, message, membros, type, target_address= None):
     try:
         logicstamp = 0
         
         if type == SYN:
             logicstamp = clock.increment()
-        if type == MSG:
-            logicstamp = clock.increment()
-            mensagem = Mensagem(usuario_obj, message, logicstamp, membros)
-            conversa.update([mensagem])
 
         data = pickle.dumps((message, logicstamp, type))
-        for membro in membros:
-            if membro.address != (HOST, PORT):
-                sock.sendto(data, membro.address)
+
+        if target_address == None: # Manda para todos se não for especificado o alvo
+            for membro in membros:
+                if membro.address != (HOST, PORT):
+                    sock.sendto(data, membro.address)
+        else:
+            sock.sendto(data, target_address)
+
+    except socket.error as e:
+        print(f"Erro de conexão! {e.strerror}\nTente novamente mais tarde...")
+        time.sleep(5)
+        exit()
+
+# Envia os pacotes que necessitam de confirmação
+def assure_send(message, membros, type, target_address= None, is_resend= False):
+    try:
+        logicstamp = 0
+        timestamp = time.time()
+        
+        if type == MSG:
+            if not is_resend: # Verifica se é a primeira vez que manda a mensagem ou se é um reenvio de pacote
+                logicstamp = clock.increment()
+                mensage_obj = Mensagem(usuario_obj, message, logicstamp, membros)
+                mensage_obj.confirmations[usuario_obj.address] = True
+
+                no_confirmed.update([mensage_obj])
+                message_dumped = pickle.dumps(mensage_obj)
+            else:
+                logicstamp = message.logicstamp
+                message_dumped = pickle.dumps(message)
+
+        elif type == CSP: 
+            if not is_resend: # Verifica se é a primeira vez que manda a mensagem ou se é um reenvio de pacote
+                logicstamp = clock.increment()
+                message_dumped = pickle.dumps(message)
+            else:
+                logicstamp = message.logicstamp
+                message_dumped = pickle.dumps(message)
+
+        else:
+            message_dumped = message
+
+        data = pickle.dumps((message_dumped, logicstamp, type)) # Carrega o data
+
+        if target_address == None: # Manda para todos se não for especificado o alvo
+            for membro in membros:
+                if membro.address != (HOST, PORT):
+                    sock.sendto(data, membro.address)
+                    waiting.append((logicstamp, timestamp, message_dumped, type, membro.address)) # Adiciona a referencia ao pacote para cada um que enviou
+
+        else: # Manda apenas pro alvo especificado
+            sock.sendto(data, target_address)
+            waiting.append((logicstamp, timestamp, message_dumped, type, target_address))
 
     except socket.error as e:
         print(f"Erro de conexão! {e.strerror}\nTente novamente mais tarde...")
@@ -66,13 +121,10 @@ def send_message(sock, clock, message, membros, type):
         exit()
 
 # Envia a sua conversa
-def sendChat(sock, adress):
+def sendChat(adress):
     try:
         for mensagemOBJ in conversa:
-            logicstamp = 0
-            partMessage = pickle.dumps(mensagemOBJ)
-            data = pickle.dumps((partMessage, logicstamp, CSP))
-            sock.sendto(data, adress)
+            assure_send(message= mensagemOBJ, membros= membros, type= CSP, target_address= adress)
             
     except socket.error as e:
         print(f"Erro de conexão! {e.strerror}\nTente novamente mais tarde...")
@@ -93,32 +145,82 @@ def pkgSort(sock, clock):
     while True:
         if len(pkgCache) > 0:
             data, address = pkgCache.pop() # Tupla contendo Data e ClientAddress (nessa ordem)
-            message, received_time, type = pickle.loads(data) # Interpreta o Data
+            message, logicstamp, type = pickle.loads(data) # Interpreta o Data
 
-            if type == MSG or type == SYN:
-                clock.update(received_time)
+            if type == MSG or type == SYN or type == CSP:
+                clock.update(logicstamp)
 
             if type == MSG:
-                msg_dono = Contatos().get_contato_by_address(address)
-                mensagem = Mensagem(msg_dono, message, received_time, membros)
-                conversa.update([mensagem])
+                mensagem_obj = pickle.loads(message)
+                no_confirmed.update([mensagem_obj])
+
+                send(sock, clock, logicstamp, membros, ACK, target_address= address) # ACK da mensagem
+
                 printSort()
 
-            elif type == SYN and (message == 'first' or message == 'syncRequest'):
-                send_message(sock, clock, None, membros, SYN) # Mensagem para sincronizar o relógio
-                sendChat(sock, address)
+            elif type == SYN and message == 'first':
+                send(sock, clock, None, membros, SYN, target_address= address) # Mensagem para sincronizar o relógio
+                sendChat(address)
+
+            elif type == ACK:
+                confirms.append(logicstamp)
+
+                with no_confirmed_lock:
+                    for msg in no_confirmed.copy(): 
+                        if msg.logicstamp == message:
+                            msg.confirmations[address] = True # Adiciono um confirm a mensagem
+            
+            elif type == SHOW:
+                send(sock, clock, logicstamp, membros, ACK, target_address= address) # ACK da mensagem
+
+                for msg in no_confirmed.copy():
+                    if msg.logicstamp == message:
+                        conversa.update([msg])
+                        no_confirmed.remove(msg)
+                        printSort()
 
             elif type == CSP:
                 messageOBJ = pickle.loads(message)
                 conversa.update([messageOBJ])
+
+                send(sock, clock, logicstamp, membros, ACK, target_address= address) # ACK da mensagem
+
+                printSort()
             
             elif type == PING:
-                send_message(sock, clock, None, membros, PING_ACK)
+                send(sock, clock, None, membros, PONG) # Pong reverberado para todos
 
-            elif type == PING_ACK:
+            elif type == PONG:
                 for membro in membros:
                     if membro.address == address:
                         membro.status = ON
+
+        with no_confirmed_lock:
+            for msg in no_confirmed.copy(): # Verifica se a mensagem já possui todos os confirms
+                if all(msg.confirmations[membro.address] for membro in membros if membro.status != OFF): 
+                    conversa.update([msg])
+                    no_confirmed.discard(msg)
+                    assure_send(message= msg.logicstamp, membros= membros, type= SHOW) # Envia o show para todos
+                    printSort()
+        
+# Trata as confirmações         0           1      2       3       4
+def confirm_handler(): # (logicstamp, timestamp, type, message, address)
+    while True:
+        try:
+            tempo_atual = time.time() # Timestamp do momento atual
+
+            pacote = waiting.pop()
+            if pacote[0] not in confirms:
+                # Se precisa de reenvio e se passou 1 segundo desde que foi enviado
+                if tempo_atual >= pacote[1] + RESEND_TIME and any(filter(lambda membro: membro.address == pacote[4] and membro.status != OFF, membros)):
+                    assure_send(message= pacote[3], membros= membros, type= pacote[2], target_address= pacote[4], is_resend= True)
+                    pacote[1] = time.time()
+                    waiting.append(pacote) 
+            else:
+                confirms.remove(pacote[0])
+
+        except IndexError as e:
+            continue
 
 # Envia pings
 def online_requester(sock, clock):
@@ -219,10 +321,9 @@ Lista de comandos:
             os.makedirs("Data/")
             
         with open("Data/input_file.txt", 'a+', encoding='utf-8') as arquivo:
-            arquivo.seek(0)
+            arquivo.seek(0) # Mover o cursos para o inicio
             for linha in arquivo:
-                print("loop")
-                send_message(sock, clock, encrypt(linha.rstrip('\n'), password), membros, MSG)
+                assure_send(encrypt(linha.rstrip('\n'), password), membros, MSG)
                 printSort()
                 time.sleep(0.1)
             
@@ -232,9 +333,6 @@ Lista de comandos:
         print(f"Comando desconhecido! tente /help")
 
 def main():
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((HOST, PORT))
-
     # Threads secundárias
     package_listner_thread = threading.Thread(target=listner, args=(sock, clock), daemon=True)
     package_listner_thread.start()
@@ -244,18 +342,12 @@ def main():
 
     online_requester_thread = threading.Thread(target= online_requester, args=(sock, clock), daemon=True)
     online_requester_thread.start()
-    
-    # Teste: Mostra em tempo real o status do usuário
-    # while True:
-    #     string = ""
-    #     for membro in membros:
-    #         string += "\n" + f"{membro.name} - {membro.address}: {membro.status}" 
-    #     os.system(LIMPAR)
-    #     print(string)
-    #     time.sleep(0.16)
+
+    confirm_handler_thread = threading.Thread(target= confirm_handler, args=(), daemon=True)
+    confirm_handler_thread.start()
 
     # Mensagem de sincronização de relógio inicial
-    send_message(sock, clock, 'first', membros, SYN)
+    send(sock, clock, 'first', membros, SYN)
     while True:
         message = input(">:")
         while message == '':
@@ -263,8 +355,7 @@ def main():
 
         # Se for uma mensagem comum
         if message[0] != "/":
-            send_message(sock, clock, encrypt(message, password), membros, MSG)
-            printSort()
+            assure_send(encrypt(message, password), membros, MSG)
         
         # Se for um comando
         else:

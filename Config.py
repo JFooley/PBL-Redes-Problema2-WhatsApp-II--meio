@@ -1,15 +1,17 @@
 import platform
 
 # Tipos de mensagens
-MSG = "mensage"
-SYN = "sync"
-CSP = "chatSyncPart"
-MSG_ACK = "mensage ack"
-SHOW = "mensage show"
+ACK = "ack" # Send
+SYN = "sync" # Send
+MSG = "mensage" # Assure Send
+CSP = "chatSyncPart" # Assure Send
+SHOW = "mensage show" # Assure Send
 
 # Constantes de sincronização
-PING = "online ping"
-PING_ACK = "online ack"
+RESEND_TIME = 0.5
+
+PING = "online ping" # Send
+PONG = "online ack" # Send
 
 ON = "online"
 OFF = "offline"
