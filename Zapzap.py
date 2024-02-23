@@ -164,7 +164,7 @@ def pkgSort(sock, clock):
                 send(sock, clock, logicstamp, membros, ACK, target_address= address) # ACK da mensagem
 
                 for msg in no_confirmed.copy():
-                    if msg.logicstamp == message:
+                    if msg.logicstamp == message[0] and msg.user.address == message[1]:
                         conversa.update([msg])
                         no_confirmed.remove(msg)
                         printSort()
@@ -190,7 +190,7 @@ def pkgSort(sock, clock):
                 if all(msg.confirmations[membro.address] for membro in membros if membro.status != OFF): 
                     conversa.update([msg])
                     no_confirmed.discard(msg)
-                    assure_send(message= msg.logicstamp, membros= membros, type= SHOW) # Envia o show para todos
+                    assure_send(message= (msg.logicstamp, msg.user.address), membros= membros, type= SHOW) # Envia o show para todos
                     printSort()
         
 # Trata as confirmações         0         1        2      3        4
