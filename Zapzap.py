@@ -5,11 +5,6 @@ from Criptography import encrypt, decrypt
 
 print(whatsApp2)
 
-# Testa se você está online
-if socket.gethostbyname(socket.gethostbyname(socket.gethostname())) == "127.0.0.1":
-    print("ERRO! Você não está conectado a nenhuma rede.")
-    sys.exit()
-
 # Dados
 membros = []
 conversa = set()
@@ -26,10 +21,9 @@ Contatos().initialize()
 # Informações do usuário
 nome_usuario = input("Digite o seu usuário: ")
 usuario_obj: Membro = Contatos().get_contato(nome_usuario)
-while usuario_obj == None or usuario_obj.address[0] != socket.gethostbyname(socket.gethostname()):
+while usuario_obj == None:
     nome_usuario = input("Usuário inválido! Digite o seu usuário: ")
     usuario_obj = Contatos().get_contato(nome_usuario)
-
 usuario_obj.status = ON
 membros.append(usuario_obj)
 
