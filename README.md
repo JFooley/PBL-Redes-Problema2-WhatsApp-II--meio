@@ -2,7 +2,7 @@
   <h1>
   Universidade Estadual de Feira de Santana (UEFS)
 
-  Problema 2: ZapZap
+  Problema 3: ZapZap RC
   </h1>
 
   <h3>
