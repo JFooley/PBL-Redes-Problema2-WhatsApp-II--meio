@@ -18,6 +18,8 @@
 
 # 1. Introdução
 
+ainda não finalizei o relatório 
+
 # 2. Desenvolvimento
 
 # 3. Resultados
