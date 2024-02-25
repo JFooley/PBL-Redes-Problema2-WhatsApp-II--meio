@@ -52,7 +52,7 @@ Para resolver o problema da verificação dos pacotes foi decidido utilizar o mo
 Os pacotes do sistema que não podem ser perdidos são: as mensagens novas, as mensagens antigas (em caso de sincronização) e os pacotes que autorizam a exibição de uma mensagem. A imagem abaixo demonstra um exemplo de como essa sistema funciona na teoria e porque ele garante que o nó vai receber o pacote. 
 </p>
 
-![Exemplo de funcionamento da confirmação e reenvio dos pacotes.](link da imagem)
+![Exemplo de funcionamento da confirmação e reenvio dos pacotes.](https://github.com/JFooley/PBL-Redes-Problema3-WhatsApp-II-RC/blob/c1055a3d59a52a5637fa94e7b3499cf4965d42ef/Imagens/Imagem1.png)
 
 # 3. Resultados
 <p style="text-align: justify;">
