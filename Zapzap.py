@@ -3,6 +3,14 @@ from Config import *
 from Classes import Mensagem, Membro, LamportClock, Contatos
 from Criptography import encrypt, decrypt
 
+# OBSERVAÇÕES
+# Para garantir o funcionamento correto, lembre-se de adicionar o nome, IP e porta no arquivo Contatos
+# dentro da pasta Data, seguindo o modelo de formatação de lá (nome, endereço, porta), de cada um dos nós
+# do grupo, tanto seu nó quanto os dos demais usuários. Lembre-se também de se identificar como o usuário que
+# possua seu IP e Porta correto, do contrário a criação do socket vai resultar em um erro.
+# Lembrar também que a chave de criptografia é um numero inteiro.
+
+
 print(whatsApp2)
 
 # Dados
